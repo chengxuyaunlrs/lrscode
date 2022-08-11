@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+
+    <script>
+
+
+        // 1.选择排序/冒泡排序
+        function fn1() {
+            let arr = [1, 3, 16, 7, 14, 9, 4, 12];
+            // 选择
+            //   for (let i = 0; i <= arr.length - 1; i++) {
+            //     for (let j = i + 1; j <= arr.length - 1; j++) {
+            //       if (arr[i] > arr[j]) {
+            //         let temp = arr[j];
+            //         arr[j] = arr[i];
+            //         arr[i] = temp;
+            //       }
+            //     }
+            //   }
+
+            // 冒泡
+
+            for (let i = 0; i <= arr.length - 1; i++) {
+                for (let j = 0; j <= arr.length - 1 - i; j++) {
+                    if (arr[j] > arr[j + 1]) {
+                        let temp = arr[j + 1];
+                        arr[j + 1] = arr[j];
+                        arr[j] = temp;
+                    }
+                }
+            }
+            console.log(arr);
+        }
+        // fn1();
+
+        // 2.深拷贝
+        function fn2() {
+            let a = {
+                name: "jiege",
+                age: 18,
+                gender: "nan",
+                wife: {
+                    name: "dasd",
+                    age: 12,
+                },
+            };
+            function deepclone(obj, map = new Map()) {
+                if (typeof obj !== "object") {
+                    return obj;
+                }
+                let temp = Array.isArray(obj) ? [] : {};
+                if (map.get(obj)) {
+                    return map.get(obj);
+                }
+                map.set(obj, temp);
+                for (let key in obj) {
+                    temp[key] = deepclone(obj[key], map);
+                }
+                return temp;
+            }
+
+            let b = deepclone(a);
+            b.gender = "nvl";
+            console.log(a);
+            console.log(b);
+        }
+
+        // fn2();
+        // 3.手撸函数防抖与节流
+        function fn3() {
+            function fangdoudemo(fn, deplay) {
+                let time = null;
+                return function (...args) {
+                    if (time) {
+                        clearTimeout(time);
+                    }
+                    time = setTimeout(() => {
+                        fn1, apply(null, args);
+                    }, 1000);
+                };
+            }
+
+            function jieliudemo(fn, deplay) {
+                let time = null;
+                return function (...args) {
+                    if (!time) {
+                        fn.apply(null, args);
+                        time = setTimeout(() => {
+                            time = null;
+                        }, deplay);
+                    }
+                };
+            }
+        }
+
+        // 4.使用连环异步回调实现求5的阶乘
+        function fn4() {
+            const multiply = (a, b, callback) => {
+                setTimeout(() => {
+                    callback(a * b);
+                }, 1000);
+            };
+
+            function mulPromise(a, b) {
+                return new Promise((resolve, reject) => {
+                    multiply(a, b, (set) => resolve(set));
+                });
+            }
+            mulPromise(2, 3)
+                .then((value) => {
+                    console.log(value);
+                    return mulPromise(value, 4);
+                })
+                .then((value) => {
+                    console.log(value);
+                    return mulPromise(value, 5);
+                })
+                .then((value) => {
+                    console.log(value);
+                });
+
+            async function asyncdemo() {
+                let set = await mulPromise(2, 3);
+                console.log(set);
+                set = await mulPromise(set, 4);
+                console.log(set);
+                set = await mulPromise(set, 5);
+                console.log(set);
+            }
+            asyncdemo();
+        }
+
+        // 5.提取URL中的查询参数
+        function fn5() {
+            function getParams(url) {
+                const obj = {};
+                const reg = /\w+=\w+/g;
+
+                url.match(reg).forEach((substr) => {
+                    let [key, value] = substr.split("=");
+                    obj[key] = value;
+                });
+                return obj;
+            }
+            console.log(getParams("/add?a=123&b=344#abc"));
+        }
+
+        // 6.封装ajax,实现POST一个表单(Promise版)
+        function fn6() {
+            function searchstring(data) {
+                let str = "";
+                for (let key in data) {
+                    str += `&${key}=${data[key]}`;
+                }
+                str = str.slice(1);
+                return str;
+            }
+            function ajax({ url, data, method, dataType, onSuccess, onFail }) {
+                const xhr = new XMLHttpRequest();
+                if (!url) {
+                    throw new Error("url错误");
+                }
+                let reqbody = null;
+                !onSuccess && (onSuccess = (data) => console.log(data));
+                !onFail && (onFail = (err) => console.log(err));
+
+                method = method || "GET";
+                xhr.open(method, url);
+                switch (true) {
+                    case dataType == "form":
+                        xhr.setRequestHeader(
+                            "Content-Type",
+                            "application/x-www-form-urlencoded"
+                        );
+                        reqbody = searchstring(data);
+
+                        break;
+                    case dataType == "json":
+                        xhr.setRequestHeader("Content-Type", "application/json");
+                        reqbody = JSON.stringify(data);
+
+                        break;
+                    default:
+                        break;
+                }
+
+                xhr.onload = () => onSuccess(xhr.responseText);
+                xhr.onerror = (err) => onFail(err);
+                xhr.send(reqbody);
+            }
+
+            function ajaxPromise(config) {
+                return new Promise((resolve, reject) => {
+                    ajax({
+                        ...config,
+                        onSuccess: (data) => resolve(data),
+                        onFail: (err) => reject(err),
+                    });
+                });
+            }
+            ajaxPromise({
+                url: "http://www.httpbin.org/post",
+                method: "POST",
+                dataType: "form",
+                data: {
+                    name: "admin",
+                    pwd: "123456",
+                },
+            })
+                .then((data) => console.log(data))
+                .catch((err) => console.log(err));
+        }
+        // fn6();
+
+        // 7.带有超时功能的Promise
+        function fn7() {
+            function rq(url) {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        Math.random() > 0.5 ? resolve(`${url}的数据`) : reject("meiyou")
+                    }, 1000)
+                })
+            }
+            function execWithTimeout(fn, ms) {
+                return new Promise((resolve, reject) => {
+                    let timer = setTimeout(() => {
+                        reject('网络超时')
+                    }, ms)
+                    fn().then(data => resolve(data))
+                        .catch(err => reject(err))
+                        .finally(() => clearTimeout(timer))
+                })
+            }
+            async function fn() {
+                return await rq("www.taobao.com")
+            }
+            execWithTimeout(fn, 3000)
+                .then((data) => console.log(data))
+                .catch((err) => console.log(err));
+        }
+        // fn7()
+
+        // 8.一次性获取多个指定页面
+        function fn8() {
+            function geturl(url) {
+
+                return new Promise((resolve, reject) => {
+
+                    setTimeout(() => {
+                        Math.random() > 0.5 ? resolve(`${url}的数据`) : reject('网络错误')
+                    }, 1000)
+                })
+            }
+            function fetchData(urls = []) {
+
+                let get = urls.filter(url => url.endsWith("taobao.com")).map(url => geturl(url))
+
+                return Promise.allSettled(get)
+
+            }
+            fetchData([
+                "https://www.taobao.com",
+                "https://www.baidu.com",
+                "https://web.taobao.com",
+            ]).then(data => console.log(data))
+                .catch((err) => console.log(err));
+        }
+        // fn8()
+
+        // 9.IP地址比大小
+        function fn9() {
+            function compare(ip1 = "", ip2 = "") {
+                const arr1 = ip1.split(".").map((item) => item * 1);
+                const arr2 = ip2.split(".").map((item) => item * 1);
+
+                for (let i = 0; i < arr1.length; i++) {
+                    if (arr1[i] > arr2[i]) {
+                        return 1;
+                    }
+                    if (arr1[i] < arr2[i]) {
+                        return -1;
+                    }
+                }
+                return 0;
+            }
+
+            console.log(compare("1.2.3.4", "1.1.3.4")); //1
+            console.log(compare("1.11.3.4", "1.2.3.4")); //1
+            console.log(compare("1.2.3.4", "1.11.3.4")); //-1
+            console.log(compare("1.2.3.4", "1.2.3.4")); //0
+        }
+        // fn9()
+
+        // 10.实现闭包管理全班学生成绩
+        function fn10() {
+            function scrore(name) {
+                const scores = {
+                    chinese: 0,
+                    math: 0,
+                    coding: 0,
+                };
+                return {
+                    set(key, value) {
+                        scores[key] = value;
+                    },
+                    getAll() {
+                        return `${name}:${JSON.stringify(scores)}`;
+                    },
+                };
+            }
+            const arr = ["张三疯", "尼古拉斯赵四", "隔壁老王"]
+            const obj = {}
+            arr.forEach(
+
+                name => obj[name] = scrore(name)
+            )
+            btnSet.onclick = function () {
+                let [name, key, value] = ip.value.split(":")
+                obj[name].set(key, value)
+            }
+            btnGet.onclick = function () {
+                const name = ip.value
+                pInfo.innerText = obj[name].getAll()
+            }
+
+
+        }
+        //    fnb10()
+
+        // 11.手封MyMap实现以下效果
+        function fn11() {
+
+            class MyMap {
+                constructor(name) {
+                    this.obj = {}
+                    this.size = 0
+                }
+                updatesize() {
+                    this.size = Object.keys(this.obj).length
+                }
+                set(key, value) {
+                    this.obj[key] = value
+                    this.updatesize()
+                }
+                get(key) {
+                    return this.obj[key]
+                }
+                delete() {
+                    delete this.obj[key]
+                    this.updatesize
+                }
+                clear() {
+                    this.obj = {}
+                    this.updatesize()
+                }
+                has(key) {
+                    return this.obj.hasOwnProperty(key)
+                }
+                forEach(handler) {
+                    handler.apply(this, [this.obj[key], key, this.obj])
+                }
+                keys() {
+                    return Object.keys(this.obj)
+
+                }
+                values() {
+                    return Object.keys(this.obj).map(key => this.obj[key])
+                }
+                entries() {
+                    return Object.keys(this.obj).map(key => ({ key, value: this.obj[key] }))
+                }
+            }
+
+
+
+
+
+            const map = new MyMap()
+            map.set("name", "张三")
+            map.set("age", 20)
+            map.set("gender", "男")
+
+            map.forEach(
+                (value, key) => console.log(key, value)
+            )//"name","张三" "age",20 "gender","男"
+
+            for (let entry of map.entries()) {
+                console.log(entry)
+            }//{key:"name",value:"张三"} {key:"age",value:20} {key:"gender",value:"男"}
+
+            console.log(map.size)//3
+            console.log(map.get("name"))//张三
+            console.log(map.get("age"))//20
+
+            console.log(map.has("name"))//true
+            console.log(map.has("myname"))//false
+
+            map.delete("age")
+            map.clear()
+            console.log(map.size)//0
+        }
+        // fn11()
+
+        // 12.全班人马排除空座位后抽取N名幸运观众
+        function fn12() {
+
+            let arr = []
+            for (let i = 1; i <= 100; i++) {
+                arr.push(i)
+            }
+            const empties = [12, 34, 56, 78]
+            function pick(n) {
+                arr = arr.filter(item => !empties.includes(item))
+                console.log(arr);
+                let newarr = []
+                for (let i = 1; i <= n; i++) {
+                    let [a] = arr.splice(parseInt(Math.random() * arr.length), 1)
+                    newarr.push(a)
+                }
+                console.log(newarr);
+            }
+            pick(5)
+        }
+        // fn12()
+        // 13.手撸观察者模式：实现彩票机周期性地发布
+        // 【开售】【开奖】事件，玩家开售时下注，开奖时购买
+        // ，一旦中奖则彩票机停止工作；
+        function fn13() {
+            function observerDemo(){
+    /* 被观察者 */
+    class Observable {
+        /* 创建对象时要初始化观察者队列 */
+        constructor(name){
+            this.name = name
+            this.observers = []
+        }
+        /* 注册观察者 */
+        register(...observers){
+            this.observers.push(...observers)
+
+            // 让每个注册进来的观察者o持有当前被观察者的实例
+            observers.forEach(o=>o.observable=this)
+        }
+        /* 注销观察者 */
+        unregister(ob){
+            this.observers = this.observers.filter(o=>o!==ob)
+        }
+        /* 发布事件：令所有观察者响应事件 */
+        emit(event){
+            this.observers.forEach(
+                o => o.onEvent(event)
+            )
+        }
+
+    }
+
+    class Observer {
+        constructor(name){
+            this.name = name
+        }
+        /* 响应事件 */
+        onEvent(event){
+            console.log(`${this.name}响应事件${JSON.stringify(event)}`);
+        }
+    }
+
+    /* 彩票继承被观察者 */
+    class Lottery extends Observable {
+        constructor(name){
+            super(name)
+            this.timer = null
+        }
+        start(){
+            if(!this.timer){
+                this.timer = setInterval(() => {
+                    // 对上一期开奖
+                    const event = {
+                        type:"check",
+                        code:parseInt(Math.random()*3)
+                    }
+                    console.log(this.name,"发布事件",event);
+                    this.emit(event)
+    
+                    // 对本期开售
+                    this.emit({
+                        type:"buy",
+                    })
+                }, 3000);
+            }
+        }
+
+        stop(){
+            if(this.timer){
+                clearInterval(this.timer)
+                this.timer = null
+                console.log(this.name,"停止运行");
+            }
+        }
+    }
+
+    /* 玩家继承观察者 */
+    class Player extends Observer{
+        /* 每个玩家实例拥有一个中奖号码 */
+        constructor(name){
+            super(name)
+            this.code = null
+        }
+        /* 兑奖 */
+        check(event){
+            const result =  this.code === event.code
+            console.log(this.name,"中奖否",result);
+
+            // 如果中奖让彩票机停止运行
+            result && this.observable.stop()
+            return result
+        }
+        /* 下注 */
+        buy(){
+            this.code = parseInt(Math.random()*3)
+            console.log(this.name,"购买了",this.code);
+        }
+        /* 覆写override父类方法 */
+        onEvent(event){
+            super.onEvent(event)
+            switch (event.type) {
+                case "check":
+                    this.check(event)
+                    break;
+                case "buy":
+                    this.buy()
+                    break;
+            
+                default:
+                    break;
+            }
+        }
+    }
+
+    /* 业务逻辑 */
+    const lot = new Lottery("双色球")
+    const tiger = new Player("今晚打老虎")
+    const gaojin = new Player("赌神高进")
+
+    /* 注册与注销观察者 */
+    lot.register(tiger,gaojin)
+    lot.unregister(gaojin)
+
+    /* 让彩票实例周期性地发布开售与开奖事件 */
+    lot.start()
+}
+observerDemo()
+        }
+        // fn13()
+
+        // 14.实现任意多个入参的函数fn的柯里化
+        function fn14() {
+            const curry = (fn) => {
+                return function currya(...arg) {
+                    if (arg.length < fn.length) {
+                        return function () {
+                            return currya(...arg.concat([...arguments]))
+                        }
+                    }
+                    return fn(...arg)
+                }
+            };
+
+            // add函数进去 颗粒化了的cadd函数出来
+            const add = (a, b, c, d) => a + b + c + d;
+            const cadd = curry(add);
+
+            // 一次性给够参数 = add(1,2,3,4)
+            console.log(cadd(1, 2, 3, 4)); //10
+            console.log(cadd(1)(2)(3)(4)); //10
+            console.log(cadd(1, 2)(3)(4)); //10
+        }
+        // fn14()
+
+        // 15.实现任意多个函数的管道与组合
+        function fn15() {
+            /* 管道 */
+            // const pipe = (a,b,c)=>v=>c(b(a(v)))
+            // const pipe = 实现之;
+            // const compose = 实现之;
+
+            const pipe = (...fns) => (v) => fns.reduce((pv, fn) => fn(pv), v)
+            const compose = (...fns) => (v) => fns.reverse().reduce((pv, fn) => fn(pv), v)
+
+            //求数值的长度
+            const len = (n) => (n + "").length;
+
+            //求n的平方
+            const pow = (n) => n * n;
+
+            // 求立方根
+            const cubicRoot = (n) => Math.cbrt(n);
+
+            // 从左往右处理
+            console.log(pipe(len, pow, cubicRoot)(10));//10的长度为2 平方后得4 开三方得1.x
+
+            // 从右往左处理
+            console.log(compose(len, pow, cubicRoot)(1000));//1000立方根10 平方后100 长度3
+        }
+        // fn15()
+
+        // 16.函数的Promise化
+        function fn16() {
+            function add(a, b) {
+                return a + b;
+            }
+            function multiply(a, b, callback) {
+                setTimeout(() => callback(a * b), 1000);
+            }
+            // multiply(2, 3, (ret) => console.log("ret=", ret));
+
+            /* 异步函数的Promise化 */
+            function promisify(fn) {
+
+                return function (...args) {
+                    return new Promise((resolve, reject) => {
+                        const ret = fn.apply(null, [...args, (...a) => resolve(a)])
+                        ret && resolve(ret)
+                    })
+                }
+
+            }
+            /* 同步返回函数的Promise化 */
+            const padd = promisify(add)
+            padd(2, 3).then(
+                value => console.log("value=", value)//5
+            )
+            /* 异步回调函数的Promise化 */
+            const pmul = promisify(multiply);
+            pmul(2, 3)
+                .then((values) => {
+                    console.log("value=", values);//6
+                    return pmul(values[0], 4);
+                })
+                .then((values) => {
+                    console.log("value=", values);//24
+                    return pmul(values[0], 5);
+                })
+                .then((values) => console.log(values[0]));//120
+        }
+        // fn16()
+
+        // 17.封装MongoDB数据引擎层
+function fn17(){
+    async function fn3() {
+  /* 通用的获取collection连接 */
+  function getCollection(dbName, collectionName) {
+    //实现之
+    // 连接数据库需要时间 并不能立刻返回err/collection
+    return new Promise(
+      /* excutor 在执行器内部去连接数据库*/
+      (resolve, reject) => {
+        var MongoClient = require("mongodb").MongoClient;
+        var url = "mongodb://localhost:27017/";
+
+        MongoClient.connect(url, function (err, conn) {
+          if (err) {
+            //   reject(err)
+            resolve({
+              err,
+              collection: undefined,
+              conn: undefined,
+            });
+            return;
+          }
+
+          var dbo = conn.db(dbName);
+          const collection = dbo.collection(collectionName);
+          resolve({
+            err: undefined,
+            collection,
+            conn,
+          });
+        });
+      }
+    );
+  }
+
+  /* 通用插入数据 */
+  async function doCreate(dbName, collectionName, dataObj) {
+    //实现之
+    // 延迟满足：稍后获得{err,collection}
+    const { err, collection, conn } = await getCollection(
+      dbName,
+      collectionName
+    );
+
+    /* await以下的代码 全部相当于写在then的回调中 */
+    if (err) {
+      // 在then的回调中 return就是向后履约
+      return {
+        err,
+        res: undefined,
+      };
+    }
+
+    collection.insertOne(dataObj, function (err, res) {
+      conn.close();
+
+      // 将数据和插入的一并履约
+      return {
+        err,
+        res,
+      };
+    });
+  }
+
+  // 模型层调用
+  async function addUser(user) {
+    // 对控制层返回的是一个Promise对象
+    const ret = await doCreate(dbName, collectionName, user);
+    return ret;
+  }
+}
+// fn3();
+}
+
+        // 18.手撸数据驱动视图微框架
+
+        function fn18() {
+            // <!-- 4个Dom元素挂载着2个【响应式数据】 -->
+            // <p id="pMyname">{name}</p>
+            // <p id="pMyage">{age}</p>
+            // <p id="pGender">{gender}</p>
+
+
+            /*数据驱动视图微框架*/
+            function defineReactive(data, keys = []) {
+
+                keys.forEach(({ name, listeners }) => {
+                    Object.defineProperty(data, name, {
+
+                        get() {
+                            console.log('get', name);
+                            return data[`x_${name}`]
+                        },
+                        set(newValue) {
+                            console.log("set", name, newValue);
+                            data[`x_${name}`] = newValue
+                            listeners.forEach((dom) => (dom.innerText = newValue))
+                        }
+                    })
+
+                })
+
+
+            }
+
+
+            const data = {};
+
+            /* 提前定义响应式数据 */
+            defineReactive(data, [
+                { name: "age", listeners: [hMyage, pMyage] },
+                { name: "name", listeners: [hMyname, pMyname] },
+                { name: "gender", listeners: [pGender] },
+            ]);
+
+            /* 初始化响应式数据 */
+            data.name = "黑哥";
+            data.age = 18;
+            data.gender = "男";
+
+            /* 响应式数据动态变化 */
+            setInterval(() => {
+                data.name = Date.now();
+                data.age = data.age + 1;
+                data.gender = data.gender === "男" ? "女" : "男";
+            }, 1000);
+
+
+        }
+    </script>
+</body>
+
+</html>
